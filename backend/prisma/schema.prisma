@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String  @id @default(uuid())
+  username String
+  email    String  @unique
+  password String
+  role     String  @default("user")  // ✅ ค่าเริ่มต้นเป็น "user"
+}
+
+model Course {
+  id        String   @id @default(uuid())
+  name      String
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Article {
+  id             String   @id @default(uuid())
+  title          String
+  content        String
+  contentDetail  String   @db.Text // เปลี่ยนจาก varchar(191) เป็น Text
+  createdAt      DateTime @default(now())
+}
+
+model Exercise {
+  id          String     @id @default(uuid())
+  title       String
+  description String
+  questions   Question[]
+  createdAt   DateTime   @default(now())
+}
+
+model Question {
+  id          String    @id @default(uuid())
+  exerciseId  String
+  exercise    Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  questionText String
+  options     Json
+  correctAnswer String
+  createdAt   DateTime   @default(now())
+}
+
+model Video {
+  id          String   @id @default(uuid())
+  title       String
+  url         String   @unique // ✅ เก็บลิงก์ URL ของวิดีโอ
+  description String
+  createdAt   DateTime @default(now())
+}
