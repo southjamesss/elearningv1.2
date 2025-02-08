@@ -24,7 +24,17 @@ const AdminExercises = () => {
         try {
             const response = await fetch("http://localhost:4000/api/exercises");
             const data = await response.json();
-            setExercises(data);
+
+            // ✅ แปลง options จาก JSON string เป็น Object
+            const formattedData = data.map(ex => ({
+                ...ex,
+                questions: ex.questions.map(q => ({
+                    ...q,
+                    options: JSON.parse(q.options), // ✅ แปลงกลับจาก JSON
+                })),
+            }));
+
+            setExercises(formattedData);
         } catch (error) {
             console.error("❌ ดึงข้อมูลล้มเหลว:", error);
         }
@@ -33,42 +43,68 @@ const AdminExercises = () => {
 
     // 📌 เพิ่มหรืออัปเดตแบบฝึกหัด
     const saveExercise = async () => {
-        if (newExercise.title.trim() && newExercise.description.trim()) {
-            setLoading(true);
-            try {
-                if (editingExercise) {
-                    // 📌 อัปเดตแบบฝึกหัด
-                    const response = await fetch(`http://localhost:4000/api/exercises/${editingExercise.id}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(newExercise),
-                    });
-                    const updatedData = await response.json();
-                    setExercises(exercises.map(ex => ex.id === updatedData.id ? updatedData : ex));
-                    setEditingExercise(null);
-                } else {
-                    // 📌 เพิ่มแบบฝึกหัดใหม่
-                    const response = await fetch("http://localhost:4000/api/exercises", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(newExercise),
-                    });
-                    const data = await response.json();
-                    setExercises([...exercises, data]);
-                }
-
-                // ✅ เคลียร์ช่องอินพุต
-                setNewExercise({
-                    title: "",
-                    description: "",
-                    questions: [{ questionText: "", options: { a: "", b: "", c: "", d: "" }, correctAnswer: "a" }],
+        if (!newExercise.title.trim() || !newExercise.description.trim()) {
+            alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+            return;
+        }
+    
+        setLoading(true);
+        try {
+            const formattedExercise = {
+                ...newExercise,
+                questions: newExercise.questions.map(q => ({
+                    questionText: q.questionText.trim() || "No Question", // ✅ ป้องกัน `null`
+                    options: JSON.stringify(q.options || {}), // ✅ ป้องกัน `null`
+                    correctAnswer: q.correctAnswer.trim() || "a", // ✅ ป้องกัน `null`
+                })),
+            };
+    
+            console.log("📡 กำลังส่งข้อมูลไป Backend:", formattedExercise); // ✅ Debugging
+    
+            let response;
+            if (editingExercise) {
+                response = await fetch(`http://localhost:4000/api/exercises/${editingExercise.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(formattedExercise),
                 });
-            } catch (error) {
-                console.error("❌ ไม่สามารถบันทึกแบบฝึกหัดได้:", error);
+            } else {
+                response = await fetch("http://localhost:4000/api/exercises", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(formattedExercise),
+                });
             }
+    
+            if (!response.ok) {
+                throw new Error(`เกิดข้อผิดพลาด HTTP ${response.status}`);
+            }
+    
+            const responseData = await response.json();
+            console.log("📥 ตอบกลับจาก API:", responseData);
+    
+            await fetchExercises();
+            resetForm();  // ✅ รีเซ็ตฟอร์มหลังจากบันทึกเสร็จ
+        } catch (error) {
+            console.error("❌ ไม่สามารถบันทึกแบบฝึกหัดได้:", error);
+            alert(`❌ บันทึกไม่สำเร็จ: ${error.message}`);
+        } finally {
             setLoading(false);
         }
     };
+    
+    // ✅ ฟังก์ชัน Reset Form
+    const resetForm = () => {
+        setNewExercise({
+            title: "",
+            description: "",
+            questions: [
+                { questionText: "", options: { a: "", b: "", c: "", d: "" }, correctAnswer: "a" },
+            ],
+        });
+        setEditingExercise(null);
+    };
+
 
     // 📌 ลบแบบฝึกหัด
     const deleteExercise = async (id) => {
@@ -85,7 +121,13 @@ const AdminExercises = () => {
 
     // 📌 เริ่มแก้ไขแบบฝึกหัด
     const startEditing = (exercise) => {
-        setNewExercise(exercise);
+        setNewExercise({
+            ...exercise,
+            questions: exercise.questions.map(q => ({
+                ...q,
+                options: typeof q.options === "string" ? JSON.parse(q.options) : q.options || {}, // ✅ ตรวจสอบก่อน parse
+            })),
+        });
         setEditingExercise(exercise);
     };
 
@@ -204,12 +246,16 @@ const AdminExercises = () => {
                 </button>
 
                 {/* 📌 ปุ่มบันทึก หรือ อัปเดต */}
-                <button
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full mt-2"
-                    onClick={saveExercise}
-                >
-                    ✔️ {editingExercise ? "อัปเดต" : "บันทึก"}
-                </button>
+                {!loading && ( // ✅ ซ่อนปุ่มขณะกำลังโหลด
+                    <button
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full mt-2"
+                        onClick={() => {
+                            saveExercise(); // ✅ กดแล้วซ่อนปุ่ม
+                        }}
+                    >
+                        ✔️ {editingExercise ? "อัปเดต" : "บันทึก"}
+                    </button>
+                )}
             </div>
 
             {/* 📌 รายการแบบฝึกหัด (ขวามือ) */}

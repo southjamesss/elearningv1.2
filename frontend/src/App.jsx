@@ -11,6 +11,9 @@ import AdminExercises from "./components/AdminExercises";
 import AdminVideos from "./components/AdminVideos";
 import Videos from "./components/Videos";
 import ArticleDetail from "./components/ArticleDetail";
+import ExerciseDetail from "./components/ExerciseDetail";
+import CourseDetail from "./components/CourseDetail";
+
 
 function App() {
   return (
@@ -27,6 +30,8 @@ function App() {
         <Route path="/admin/videos" element={<AdminVideos />} />
         <Route path="/videos" element={<Videos />} />
         <Route path="/articles/:id" element={<ArticleDetail />} />
+        <Route path="/exercises/:id" element={<ExerciseDetail />} />
+        <Route path="/courses/:id" element={<CourseDetail />} />
       </Routes>
     </Router>
   );

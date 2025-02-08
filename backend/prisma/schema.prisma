@@ -25,14 +25,15 @@ model Course {
   id        String   @id @default(uuid())
   name      String
   content   String
+  details   String?  // ✅ ทำให้ `details` เป็น nullable (`?`)
   createdAt DateTime @default(now())
 }
 
 model Article {
   id             String   @id @default(uuid())
   title          String
-  content        String
-  contentDetail  String   @db.Text // เปลี่ยนจาก varchar(191) เป็น Text
+  content        String   @db.Text
+  contentDetail  String   @db.Text  // ✅ เอา @default("") ออก
   createdAt      DateTime @default(now())
 }
 
@@ -45,13 +46,13 @@ model Exercise {
 }
 
 model Question {
-  id          String    @id @default(uuid())
-  exerciseId  String
-  exercise    Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  questionText String
-  options     Json
+  id            String @id @default(uuid())
+  exerciseId    String
+  exercise      Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  questionText  String
+  options       String @db.Text // ✅ บันทึกเป็น JSON String
   correctAnswer String
-  createdAt   DateTime   @default(now())
+  createdAt     DateTime @default(now())
 }
 
 model Video {

@@ -6,58 +6,87 @@ const AdminCourses = () => {
   const [courses, setCourses] = useState([]);
   const [newCourse, setNewCourse] = useState("");
   const [newContent, setNewContent] = useState("");
+  const [newDetails, setNewDetails] = useState(""); // ✅ รองรับเนื้อหาหลักสูตร
   const [editingCourse, setEditingCourse] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 📌 ดึงข้อมูลหลักสูตรจาก API
   useEffect(() => {
     fetchCourses();
   }, []);
 
+  // 📌 ดึงข้อมูลหลักสูตรจาก API
   const fetchCourses = async () => {
     setLoading(true);
     try {
       const response = await fetch("http://localhost:4000/api/courses");
+      if (!response.ok) throw new Error("❌ ไม่สามารถดึงข้อมูลหลักสูตรได้");
       const data = await response.json();
       setCourses(data);
     } catch (error) {
-      console.error("❌ ดึงข้อมูลล้มเหลว:", error);
+      alert("❌ ดึงข้อมูลล้มเหลว: " + error.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // 📌 เพิ่มหลักสูตรใหม่
-  const addCourse = async () => {
-    if (newCourse.trim() && newContent.trim()) {
-      setLoading(true);
-      try {
-        const response = await fetch("http://localhost:4000/api/courses", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newCourse, content: newContent }),
-        });
-        const data = await response.json();
-        setCourses([...courses, data]);
-        setNewCourse("");
-        setNewContent("");
-      } catch (error) {
-        console.error("❌ เพิ่มหลักสูตรล้มเหลว:", error);
-      }
+  // 📌 รีเซ็ตฟอร์ม
+  const resetForm = () => {
+    setNewCourse("");
+    setNewContent("");
+    setNewDetails("");
+    setEditingCourse(null);
+  };
+
+  // 📌 เพิ่มหรืออัปเดตหลักสูตร
+  const handleSubmit = async () => {
+    if (!newCourse.trim() || !newContent.trim() || !newDetails.trim()) {
+      alert("⚠️ กรุณากรอกข้อมูลให้ครบ");
+      return;
+    }
+  
+    setLoading(true);
+    try {
+      const method = editingCourse ? "PUT" : "POST";
+      const url = editingCourse
+        ? `http://localhost:4000/api/courses/${editingCourse.id}`
+        : "http://localhost:4000/api/courses";
+  
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          name: newCourse, 
+          content: newContent, 
+          details: newDetails  // ✅ ส่งข้อมูล `details`
+        }),
+      });
+  
+      if (!response.ok) throw new Error(`❌ ไม่สามารถ${editingCourse ? "อัปเดต" : "เพิ่ม"}หลักสูตรได้`);
+      await fetchCourses();
+      resetForm();
+    } catch (error) {
+      alert(error.message);
+    } finally {
       setLoading(false);
     }
   };
 
   // 📌 ลบหลักสูตร
   const deleteCourse = async (id) => {
-    if (!window.confirm("คุณต้องการลบหลักสูตรนี้หรือไม่?")) return;
+    if (!window.confirm("⚠️ คุณต้องการลบหลักสูตรนี้หรือไม่?")) return;
     setLoading(true);
     try {
-      await fetch(`http://localhost:4000/api/courses/${id}`, { method: "DELETE" });
+      const response = await fetch(`http://localhost:4000/api/courses/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("❌ ลบหลักสูตรล้มเหลว");
       setCourses(courses.filter((course) => course.id !== id));
     } catch (error) {
-      console.error("❌ ลบหลักสูตรล้มเหลว:", error);
+      alert("❌ ลบหลักสูตรล้มเหลว: " + error.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // 📌 เริ่มแก้ไขหลักสูตร
@@ -65,39 +94,13 @@ const AdminCourses = () => {
     setEditingCourse(course);
     setNewCourse(course.name);
     setNewContent(course.content);
-  };
-
-  // 📌 อัปเดตหลักสูตร
-  const updateCourse = async () => {
-    if (editingCourse && newCourse.trim() && newContent.trim()) {
-      setLoading(true);
-      try {
-        const response = await fetch(`http://localhost:4000/api/courses/${editingCourse.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newCourse, content: newContent }),
-        });
-        const updatedCourse = await response.json();
-        setCourses(
-          courses.map((course) =>
-            course.id === updatedCourse.id ? updatedCourse : course
-          )
-        );
-        setEditingCourse(null);
-        setNewCourse("");
-        setNewContent("");
-      } catch (error) {
-        console.error("❌ อัปเดตหลักสูตรล้มเหลว:", error);
-      }
-      setLoading(false);
-    }
+    setNewDetails(course.details || ""); // ✅ โหลดเนื้อหาที่มีอยู่
   };
 
   return (
     <div className="p-10 bg-gray-100 min-h-screen flex flex-col items-center">
       <h1 className="text-4xl font-bold mb-6 text-blue-700">📚 จัดการหลักสูตร</h1>
 
-      {/* แสดง Loading */}
       {loading && <p className="text-blue-500">⏳ กำลังโหลด...</p>}
 
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-xl">
@@ -117,32 +120,37 @@ const AdminCourses = () => {
             className="p-3 border rounded-lg w-full"
             rows="3"
           />
+          <textarea
+            value={newDetails}
+            onChange={(e) => setNewDetails(e.target.value)}
+            placeholder="เนื้อหาหลักสูตร"
+            className="p-3 border rounded-lg w-full"
+            rows="5"
+          />
           <div className="flex gap-3">
-            {editingCourse ? (
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex-1" onClick={updateCourse}>
-                ✔️ อัปเดต
-              </button>
-            ) : (
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex-1" onClick={addCourse}>
-                ➕ เพิ่ม
-              </button>
-            )}
-            <button className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600" onClick={() => { setNewCourse(""); setNewContent(""); }}>
+            <button
+              className={`px-4 py-2 text-white rounded-lg flex-1 ${
+                editingCourse ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
+              }`}
+              onClick={handleSubmit}
+            >
+              {editingCourse ? "✔️ อัปเดต" : "➕ เพิ่ม"}
+            </button>
+            <button className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600" onClick={resetForm}>
               🗑️ ล้าง
             </button>
           </div>
         </div>
       </div>
 
-      {/* Divider */}
       <div className="border-t border-gray-300 w-full max-w-xl my-6"></div>
 
-      {/* รายการหลักสูตร */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-4xl">
         {courses.map((course) => (
           <div key={course.id} className="p-4 bg-white shadow-lg rounded-lg hover:shadow-xl transition transform hover:scale-105">
             <h2 className="text-lg font-bold text-gray-800">{course.name}</h2>
             <p className="text-sm text-gray-600 mt-2">{course.content}</p>
+            <p className="text-sm text-gray-500 mt-2">{course.details}</p> {/* ✅ แสดงเนื้อหา */}
             <div className="flex justify-between mt-4">
               <button className="px-3 py-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600" onClick={() => startEditing(course)}>
                 ✏️ แก้ไข
@@ -162,7 +170,6 @@ const AdminCourses = () => {
       >
         กลับไปหน้า Admin
       </button>
-
     </div>
   );
 };

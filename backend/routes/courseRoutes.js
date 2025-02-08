@@ -4,114 +4,92 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// 📌 ดึงข้อมูลบทความทั้งหมด
+// 📌 ดึงข้อมูลหลักสูตรทั้งหมด
 router.get("/", async (req, res) => {
   try {
-    const articles = await prisma.article.findMany();
-    res.json(articles);
+    const courses = await prisma.course.findMany();
+    res.json(courses);
   } catch (error) {
-    console.error("❌ ดึงข้อมูลบทความล้มเหลว:", error);
-    res.status(500).json({ error: "❌ ไม่สามารถดึงบทความได้" });
+    console.error("❌ ดึงข้อมูลหลักสูตรล้มเหลว:", error);
+    res.status(500).json({ error: "❌ ไม่สามารถดึงหลักสูตรได้" });
   }
 });
 
-// 📌 ดึงบทความเดี่ยว
+// 📌 ดึงข้อมูลหลักสูตรเดี่ยวตาม ID
 router.get("/:id", async (req, res) => {
   try {
-    const id = req.params.id;
+    const { id } = req.params;
+    const course = await prisma.course.findUnique({ where: { id } });
 
-    console.log("🔍 กำลังค้นหาบทความ ID:", id);
+    if (!course) return res.status(404).json({ error: "❌ ไม่พบหลักสูตร" });
 
-    if (!id) {
-      return res.status(400).json({ error: "❌ กรุณาระบุ ID ของบทความ" });
-    }
-
-    const article = await prisma.article.findUnique({ where: { id } });
-
-    if (!article) {
-      return res.status(404).json({ error: "❌ ไม่พบบทความ" });
-    }
-
-    res.json(article);
+    res.json(course);
   } catch (error) {
-    console.error("❌ ดึงข้อมูลบทความเดี่ยวล้มเหลว:", error);
-    res.status(500).json({ error: "❌ เกิดข้อผิดพลาด" });
+    console.error("❌ ดึงข้อมูลหลักสูตรล้มเหลว:", error);
+    res.status(500).json({ error: "❌ ไม่สามารถดึงหลักสูตรได้" });
   }
 });
 
-// 📌 เพิ่มบทความใหม่
+// 📌 เพิ่มหลักสูตรใหม่ (รองรับ `details`)
 router.post("/", async (req, res) => {
   try {
-    const { title, content, contentDetail } = req.body;
-    console.log("📥 ข้อมูลที่ได้รับ:", req.body);
-
-    if (!title || !content || !contentDetail) {
-      return res.status(400).json({ error: "❌ กรุณากรอก title, content และ contentDetail" });
+    const { name, content, details } = req.body;
+    if (!name || !content || !details) {
+      return res.status(400).json({ error: "❌ กรุณากรอก name, content และ details" });
     }
 
-    const newArticle = await prisma.article.create({
-      data: { title, content, contentDetail },
+    const newCourse = await prisma.course.create({
+      data: { name, content, details },
     });
 
-    console.log("✅ บันทึกบทความใหม่สำเร็จ:", newArticle);
-    res.status(201).json(newArticle);
+    console.log("✅ เพิ่มหลักสูตรใหม่สำเร็จ:", newCourse);
+    res.status(201).json(newCourse);
   } catch (error) {
-    console.error("❌ เพิ่มบทความล้มเหลว:", error);
-    res.status(500).json({ error: "❌ ไม่สามารถเพิ่มบทความได้" });
+    console.error("❌ เพิ่มหลักสูตรล้มเหลว:", error);
+    res.status(500).json({ error: "❌ ไม่สามารถเพิ่มหลักสูตรได้" });
   }
 });
 
-// 📌 อัปเดตบทความ
+// 📌 อัปเดตหลักสูตร (รองรับ `details`)
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, contentDetail } = req.body;
+    const { name, content, details } = req.body;
 
-    console.log("🔄 กำลังอัปเดตบทความ ID:", id);
-    console.log("📥 ข้อมูลใหม่:", req.body);
-
-    if (!title || !content || !contentDetail) {
-      return res.status(400).json({ error: "❌ กรุณากรอกข้อมูลให้ครบ (title, content, contentDetail)" });
+    if (!name || !content || !details) {
+      return res.status(400).json({ error: "❌ กรุณากรอกข้อมูลให้ครบ (name, content, details)" });
     }
 
-    const existingArticle = await prisma.article.findUnique({ where: { id } });
+    const existingCourse = await prisma.course.findUnique({ where: { id } });
+    if (!existingCourse) return res.status(404).json({ error: "❌ ไม่พบหลักสูตรที่ต้องการอัปเดต" });
 
-    if (!existingArticle) {
-      return res.status(404).json({ error: "❌ ไม่พบบทความที่จะอัปเดต" });
-    }
-
-    const updatedArticle = await prisma.article.update({
+    const updatedCourse = await prisma.course.update({
       where: { id },
-      data: { title, content, contentDetail },
+      data: { name, content, details },
     });
 
-    console.log("✅ อัปเดตบทความสำเร็จ:", updatedArticle);
-    res.json(updatedArticle);
+    console.log("✅ อัปเดตหลักสูตรสำเร็จ:", updatedCourse);
+    res.json(updatedCourse);
   } catch (error) {
-    console.error("❌ อัปเดตบทความล้มเหลว:", error);
-    res.status(500).json({ error: "❌ ไม่สามารถอัปเดตบทความได้" });
+    console.error("❌ อัปเดตหลักสูตรล้มเหลว:", error);
+    res.status(500).json({ error: "❌ ไม่สามารถอัปเดตหลักสูตรได้" });
   }
 });
 
-// 📌 ลบบทความตาม ID
+// 📌 ลบหลักสูตร
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("🗑️ กำลังลบบทความ ID:", id);
 
-    const existingArticle = await prisma.article.findUnique({ where: { id } });
+    const existingCourse = await prisma.course.findUnique({ where: { id } });
+    if (!existingCourse) return res.status(404).json({ error: "❌ ไม่พบหลักสูตรที่ต้องการลบ" });
 
-    if (!existingArticle) {
-      return res.status(404).json({ error: "❌ ไม่พบบทความที่จะลบ" });
-    }
-
-    await prisma.article.delete({ where: { id } });
-
-    console.log("✅ ลบบทความสำเร็จ:", id);
-    res.json({ message: "✅ ลบบทความสำเร็จ" });
+    await prisma.course.delete({ where: { id } });
+    console.log("🗑️ ลบหลักสูตรสำเร็จ ID:", id);
+    res.json({ message: "✅ ลบหลักสูตรสำเร็จ" });
   } catch (error) {
-    console.error("❌ ลบบทความล้มเหลว:", error);
-    res.status(500).json({ error: "❌ ไม่สามารถลบบทความได้" });
+    console.error("❌ ลบหลักสูตรล้มเหลว:", error);
+    res.status(500).json({ error: "❌ ไม่สามารถลบหลักสูตรได้" });
   }
 });
 

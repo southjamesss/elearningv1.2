@@ -80,4 +80,26 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+// 📌 ลบบทความ
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("🗑️ ลบ ID:", id); // ✅ Debug
+
+    const existingArticle = await prisma.article.findUnique({ where: { id } });
+    if (!existingArticle) {
+      console.log("❌ บทความที่ต้องการลบไม่มีอยู่จริง");
+      return res.status(404).json({ error: "❌ ไม่พบบทความที่จะลบ" });
+    }
+
+    await prisma.article.delete({ where: { id } });
+
+    console.log("✅ ลบบทความสำเร็จ:", id);
+    res.json({ message: "✅ ลบบทความสำเร็จ" });
+  } catch (error) {
+    console.error("❌ ลบบทความล้มเหลว:", error);
+    res.status(500).json({ error: "❌ ไม่สามารถลบบทความได้" });
+  }
+});
+
 module.exports = router;
