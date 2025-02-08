@@ -31,11 +31,14 @@ router.get("/:id", async (req, res) => {
 });
 
 // 📌 เพิ่มหลักสูตรใหม่ (รองรับ `details`)
+// 📌 เพิ่มหลักสูตรใหม่ (รองรับ `details` และข้อความยาว)
 router.post("/", async (req, res) => {
   try {
+    console.log("📥 ข้อมูลที่ได้รับจาก Frontend:", req.body);
+
     const { name, content, details } = req.body;
     if (!name || !content || !details) {
-      return res.status(400).json({ error: "❌ กรุณากรอก name, content และ details" });
+      return res.status(400).json({ error: "❌ กรุณากรอกข้อมูลให้ครบถ้วน" });
     }
 
     const newCourse = await prisma.course.create({
@@ -50,7 +53,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// 📌 อัปเดตหลักสูตร (รองรับ `details`)
+// 📌 อัปเดตหลักสูตร
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -92,5 +95,7 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ error: "❌ ไม่สามารถลบหลักสูตรได้" });
   }
 });
+
+
 
 module.exports = router;

@@ -24,8 +24,8 @@ model User {
 model Course {
   id        String   @id @default(uuid())
   name      String
-  content   String
-  details   String?  // ✅ ทำให้ `details` เป็น nullable (`?`)
+  content   String   @db.Text  // ✅ เปลี่ยนเป็น TEXT เพื่อรองรับข้อความยาวๆ
+  details   String?  @db.Text  // ✅ เปลี่ยนเป็น TEXT และอนุญาตให้เป็น NULL
   createdAt DateTime @default(now())
 }
 
@@ -57,8 +57,8 @@ model Question {
 
 model Video {
   id          String   @id @default(uuid())
-  title       String
-  url         String   @unique // ✅ เก็บลิงก์ URL ของวิดีโอ
-  description String
+  title       String   @db.Text // ✅ ใช้ `Text` สำหรับเก็บชื่อที่ยาวขึ้น
+  url         String   @unique  // ✅ ป้องกันลิงก์ซ้ำกัน
+  description String   @db.Text // ✅ ใช้ `Text` เพื่อรองรับคำอธิบายยาวๆ
   createdAt   DateTime @default(now())
 }
